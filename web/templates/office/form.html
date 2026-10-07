@@ -1,9 +1,10 @@
 {% extends 'office/base.html' %}
 {% block title %}{% if object %}Editar{% else %}Novo registo{% endif %} · HIMP{% endblock %}
 {% block content %}
-<a class="back-link" href="{% url 'record_list' resource %}">← {{ spec.title }}</a>
+<a class="back-link" href="{% url 'record_list' resource %}{% if selected_client %}?cliente={{ selected_client.pk }}{% endif %}">← {{ spec.title }}</a>
 <div class="page-heading"><div><p class="eyebrow">{{ spec.title|upper }}</p><h1>{% if object %}Editar registo{% else %}Novo registo{% endif %}<span class="accent">.</span></h1><p class="subtitle">Os campos marcados com * são obrigatórios.</p></div></div>
-<form class="panel record-form" method="post">{% csrf_token %}
+{% if selected_client %}<p class="alert">Cliente: <strong>{{ selected_client }}</strong> · Este registo ficará associado a este cliente.</p>{% endif %}
+<form class="panel record-form" method="post" enctype="multipart/form-data">{% csrf_token %}
 {% include 'office/form_fields.html' %}
-<div class="form-actions"><a class="button secondary" href="{% url 'record_list' resource %}">Cancelar</a><button class="button" type="submit">Guardar registo →</button></div>
+<div class="form-actions"><a class="button secondary" href="{% url 'record_list' resource %}{% if selected_client %}?cliente={{ selected_client.pk }}{% endif %}">Cancelar</a><button class="button" type="submit">Guardar registo →</button></div>
 </form>{% endblock %}

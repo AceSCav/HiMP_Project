@@ -59,7 +59,19 @@ As listas são editadas em **Opções configuráveis**. Durações precisam de `
 
 O repositório original não inclui ficheiros DOCX. Os nove modelos são importados **inativos**; um superuser deve carregar os ficheiros reais (até 5 MB) e ativá-los. Configure `required_fields` como lista JSON, por exemplo `["nome", "nif", "endereço", "data_documento"]`. Os campos dos modelos originais são preservados. Dados do cliente são preenchidos automaticamente; contratos também aceitam valor, prestações e início. Documentos são gerados em memória e descarregados por uma rota autenticada.
 
-`processo_anexo_principal` conserva uma referência textual. Upload/download de anexos de processos ou de ficheiros de clientes ainda não faz parte desta versão. A área Documentos controla entregas e gera DOCX. Valores por prestação são arredondados a cêntimos; confirme eventuais acertos no contrato.
+`processo_anexo_principal` conserva uma referência textual. A área Documentos controla entregas, gera DOCX e permite guardar ficheiros de clientes no Google Drive. Valores por prestação são arredondados a cêntimos; confirme eventuais acertos no contrato.
+
+## Google Drive por cliente
+
+Ative a **Google Drive API** no mesmo projeto Google Cloud e adicione o escopo `https://www.googleapis.com/auth/drive.file` à configuração OAuth. Nas credenciais **Web application**, registe também o URI exato `https://seu-dominio/google/drive/callback/`. Configure `GOOGLE_DRIVE_REDIRECT_URI` no `web/.env` local ou no gestor de segredos da instalação, além de `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `TOKEN_ENCRYPTION_KEY` usados pela integração Google. Reinicie o servidor após alterar variáveis. Para testar em localhost, registe exatamente `http://127.0.0.1:8017/google/drive/callback/` e use esse valor; em produção use HTTPS.
+
+Um superuser liga a conta em **Visão geral → Integração Google Drive → Ligar Google Drive**. A autorização do Drive é separada da agenda. O HIMP cria uma pasta principal **HIMP**, com subpastas **cliente_id - Nome**. No detalhe do cliente, **Criar pasta Google Drive** prepara a pasta; quando já existe, **Atualizar nome da pasta** conserva o ID e ajusta o nome. O primeiro upload também cria as pastas automaticamente.
+
+Ao criar um registo em Documentos, pode enviar um ficheiro opcional; no detalhe de um registo sem ficheiro também existe **Guardar no Google Drive**. Aceita PDF, DOCX sem macros, JPG e PNG até 10 MB. O ficheiro é enviado pelo servidor; a base de dados guarda apenas IDs/referências e nome. **Gerar documento**, a partir do cliente, permite guardar o DOCX diretamente no Drive. No fluxo Cliente → Documentos → Ver todos → Novo registo, o cliente já fica associado e não precisa de ser escolhido novamente. Pesquisa, cancelamento e retorno à lista mantêm o contexto.
+
+Os tokens OAuth são cifrados e não aparecem nos formulários/admin. Não torne públicas as pastas: abrir ficheiros no Drive exige uma conta Google com acesso. A integração trabalha com ficheiros criados pelo HIMP, sem importar automaticamente ficheiros adicionados manualmente pelo Drive nem gerir partilhas. Se o upload falhar, o registo local é preservado e pode repetir o envio; referências e hash permitem recuperar um envio remoto concluído sem duplicar o mesmo ficheiro. Cada registo aceita um ficheiro; para nova versão crie outro registo. Um documento ligado ao Drive não pode mudar de cliente pelo formulário. Eliminar um registo local preserva o ficheiro/pasta no Drive.
+
+A migração `0005` adiciona as referências de pastas/ficheiros e a tabela privada de ligação. Reveja também `docs/supabase_hardening.sql` para bloquear acesso público à nova tabela. Nenhuma conta Google é ligada automaticamente; é necessário configurar as credenciais e autorizar a conta do escritório. A aplicação continua a funcionar sem Drive para os registos locais.
 
 ## Google Calendar
 

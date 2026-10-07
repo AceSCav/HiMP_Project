@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path
-from office import views, google_calendar
+from office import views, google_calendar, google_drive
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,6 +15,10 @@ urlpatterns = [
     path('gerar-documento/', views.generate_document, name='generate_document'),
     path('google/ligar/', google_calendar.connect, name='google_connect'),
     path('google/callback/', google_calendar.callback, name='google_callback'),
+    path('google/drive/ligar/', google_drive.connect, name='drive_connect'),
+    path('google/drive/callback/', google_drive.callback, name='drive_callback'),
+    path('clientes/<int:pk>/pasta-drive/', views.client_drive_folder, name='client_drive_folder'),
+    path('documentos/<int:pk>/enviar-drive/', views.document_upload, name='document_upload'),
     path('agenda/<int:pk>/sincronizar/', views.calendar_sync, name='calendar_sync'),
     path('gestao/<str:resource>/', views.record_list, name='record_list'),
     path('gestao/<str:resource>/novo/', views.record_edit, name='record_create'),

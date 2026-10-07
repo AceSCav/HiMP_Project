@@ -1,12 +1,42 @@
 import re
 import zipfile
+from copy import deepcopy
 from datetime import date
 from io import BytesIO
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import models
-from .models import Configuration, DocumentTemplate, Cliente
+from .models import Configuration, DocumentTemplate, Cliente, DocumentoCliente
+
+
+def validate_drive_file(file):
+    if file.size > 10 * 1024 * 1024 or file.size == 0:
+        raise ValidationError('Envie um ficheiro com até 10 MB, não vazio.')
+    suffix = file.name.lower().rsplit('.', 1)[-1]
+    file.seek(0)
+    head = file.read(8)
+    file.seek(0)
+    valid = (suffix == 'pdf' and head.startswith(b'%PDF-') or
+             suffix == 'png' and head.startswith(b'\x89PNG\r\n\x1a\n') or
+             suffix in ('jpg', 'jpeg') and head.startswith(b'\xff\xd8\xff'))
+    if suffix == 'docx':
+        try:
+            with zipfile.ZipFile(file) as archive:
+                valid = ('word/document.xml' in archive.namelist() and
+                         sum(m.file_size for m in archive.infolist()) <= 50 * 1024 * 1024 and
+                         not any('vbaproject' in m.filename.lower() for m in archive.infolist()))
+        except (zipfile.BadZipFile, OSError):
+            valid = False
+        finally:
+            file.seek(0)
+    if not valid:
+        raise ValidationError('Use PDF, DOCX sem macros, JPG ou PNG válidos.')
+
+
+class DriveUploadForm(forms.Form):
+    ficheiro = forms.FileField(label='Ficheiro para guardar no Google Drive', validators=[validate_drive_file],
+                              help_text='PDF, DOCX, JPG ou PNG · até 10 MB.')
 
 
 class RecordForm(forms.ModelForm):
@@ -45,6 +75,10 @@ class RecordForm(forms.ModelForm):
         for name in ('nome_completo', 'titulo', 'cliente', 'documento_nome', 'processo', 'montante', 'data_inicio', 'duracao'):
             if name in self.fields:
                 self.fields[name].required = True
+        if self._meta.model == DocumentoCliente and not self.instance.drive_file_id:
+            self.fields['ficheiro'] = deepcopy(DriveUploadForm.base_fields['ficheiro'])
+            self.fields['ficheiro'].required = False
+            self.fields['ficheiro'].help_text += ' Opcional; requer ligação Google do escritório.'
 
     def clean(self):
         data = super().clean()
@@ -105,6 +139,7 @@ class TemplateAdminForm(forms.ModelForm):
 class GenerationForm(forms.Form):
     cliente = forms.ModelChoiceField(queryset=Cliente.objects.all(), label='Cliente')
     modelo = forms.ModelChoiceField(queryset=DocumentTemplate.objects.filter(active=True), label='Modelo')
+    guardar_drive = forms.BooleanField(label='Guardar na pasta Google Drive do cliente', required=False)
     valor_contrato = forms.DecimalField(label='Valor do contrato (€)', max_digits=12, decimal_places=2, min_value=0, required=False)
     numero_parcelas = forms.IntegerField(label='Número de prestações', min_value=1, max_value=120, required=False)
     inicio_prestacao = forms.DateField(label='Início das prestações', widget=forms.DateInput(attrs={'type': 'date'}), required=False)

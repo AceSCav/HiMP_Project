@@ -12,7 +12,7 @@ class Resource:
 
 RESOURCES = {
     'clientes': Resource(models.Cliente, 'Clientes', 'Pessoas, contactos e documentação num só lugar.',
-        tuple(f.name for f in models.Cliente._meta.fields if not f.primary_key),
+        tuple(f.name for f in models.Cliente._meta.fields if not f.primary_key and f.editable),
         ('nome_completo', 'nif', 'email', 'contato', 'localidade'),
         ('nome_completo', 'nif', 'passaporte', 'titulo_residencia', 'email', 'processos__numero_processo')),
     'processos': Resource(models.Processo, 'Processos', 'Acompanhe cada processo e o seu histórico de etapas.',

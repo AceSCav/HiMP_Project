@@ -16,8 +16,34 @@ from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.decorators.http import require_POST
 
-from .forms import GenerationForm, record_form
-from .models import Agendamento, AuditEvent, Cliente, Configuration, DocumentoCliente, Pagamento, Processo
+from .forms import GenerationForm, DriveUploadForm, record_form
+from .models import Agendamento, AuditEvent, Cliente, Configuration, DocumentoCliente, Pagamento, Processo, DriveConnection
+
+
+def contextual_client(request, spec):
+    if 'cliente' not in spec.fields or not request.GET.get('cliente'):
+        return None
+    value = request.GET['cliente']
+    if not value.isdigit() or len(value) > 10:
+        raise Http404
+    return get_object_or_404(Cliente, pk=int(value))
+
+
+def fix_client(form, client):
+    from django import forms
+    if client:
+        form.initial['cliente'] = client.pk
+        form.fields['cliente'].disabled = True
+        form.fields['cliente'].widget = forms.HiddenInput()
+
+
+def save_drive_file(request, obj, file):
+    import mimetypes
+    from pathlib import PurePosixPath
+    from .google_drive import upload_document
+    filename = PurePosixPath(file.name.replace('\\', '/')).name[:255]
+    obj = upload_document(obj.pk, file.read(), filename, mimetypes.guess_type(filename)[0] or 'application/octet-stream')
+    audit(request, 'drive_upload', obj)
 from .registry import RESOURCES
 
 
@@ -69,7 +95,8 @@ def dashboard(request):
         upcoming = Agendamento.objects.filter(data_inicio__gte=timezone.now()).select_related('cliente')[:5]
     if request.user.has_perm('office.view_documentocliente'):
         pending = DocumentoCliente.objects.filter(Q(entregue=False) | Q(entregue__isnull=True)).select_related('cliente')[:5]
-    return render(request, 'office/dashboard.html', {'cards': cards, 'payments': payments, 'upcoming': upcoming, 'pending': pending, 'today': today})
+    return render(request, 'office/dashboard.html', {'cards': cards, 'payments': payments, 'upcoming': upcoming, 'pending': pending, 'today': today,
+                                                    'drive_connected': DriveConnection.objects.filter(key='office').exists()})
 
 
 @resource_access('view')
@@ -81,9 +108,9 @@ def record_list(request, resource, spec):
         for field in spec.search:
             search |= Q(**{f'{field}__icontains': query})
         records = records.filter(search).distinct()
-    selected_client = request.GET.get('cliente', '')
-    if selected_client.isdigit() and 'cliente' in spec.fields:
-        records = records.filter(cliente_id=int(selected_client))
+    selected_client = contextual_client(request, spec)
+    if selected_client:
+        records = records.filter(cliente=selected_client)
     if resource == 'pagamentos' and request.GET.get('filtro') == 'atraso':
         records = records.filter(data_conclusao__isnull=True, data_limite__lt=timezone.localdate())
     page = Paginator(records, 25).get_page(request.GET.get('page'))
@@ -91,7 +118,7 @@ def record_list(request, resource, spec):
     headers = [spec.model._meta.get_field(field).verbose_name for field in spec.columns]
     return render(request, 'office/list.html', {
         'resource': resource, 'spec': spec, 'rows': rows, 'headers': headers,
-        'page': page, 'query': query,
+        'page': page, 'query': query, 'selected_client': selected_client,
         'can_add': request.user.has_perm(f'office.add_{spec.model._meta.model_name}'),
     })
 
@@ -113,6 +140,8 @@ def record_detail(request, resource, spec, pk):
         'can_edit': request.user.has_perm(f'office.change_{spec.model._meta.model_name}'),
         'can_delete': request.user.has_perm(f'office.delete_{spec.model._meta.model_name}'),
         'can_sync': resource == 'agenda' and request.user.has_perm('office.sync_calendar'),
+        'upload_form': DriveUploadForm() if resource == 'documentos' and not instance.drive_file_id else None,
+        'drive_connected': DriveConnection.objects.filter(key='office').exists(),
     })
 
 
@@ -125,10 +154,12 @@ def record_edit(request, resource, pk=None):
     if not request.user.has_perm(f'office.{action}_{spec.model._meta.model_name}'):
         raise PermissionDenied
     instance = get_object_or_404(spec.model, pk=pk) if pk is not None else None
-    initial = {}
-    if request.GET.get('cliente', '').isdigit() and 'cliente' in spec.fields:
-        initial['cliente'] = request.GET['cliente']
-    form = record_form(spec)(request.POST if request.method == 'POST' else None, instance=instance, initial=initial)
+    selected_client = contextual_client(request, spec) if instance is None else None
+    if resource == 'documentos' and instance and instance.drive_file_id:
+        selected_client = instance.cliente
+    form = record_form(spec)(request.POST if request.method == 'POST' else None,
+                             request.FILES if request.method == 'POST' else None, instance=instance)
+    fix_client(form, selected_client)
     if request.method == 'POST' and form.is_valid():
         try:
             with transaction.atomic():
@@ -138,8 +169,15 @@ def record_edit(request, resource, pk=None):
             form.add_error(None, 'Este registo entra em conflito com dados existentes. Verifique os identificadores.')
         else:
             messages.success(request, 'Registo guardado com sucesso.')
+            if resource == 'documentos' and form.cleaned_data.get('ficheiro'):
+                try:
+                    save_drive_file(request, obj, form.cleaned_data['ficheiro'])
+                except Exception:
+                    messages.error(request, 'O registo foi guardado, mas o envio ao Drive falhou. Verifique a ligação Google e volte a enviar o ficheiro no detalhe do documento.')
+                else:
+                    messages.success(request, 'Ficheiro guardado na pasta Google Drive do cliente.')
             return redirect('record_detail', resource=resource, pk=obj.pk)
-    return render(request, 'office/form.html', {'resource': resource, 'spec': spec, 'form': form, 'object': instance})
+    return render(request, 'office/form.html', {'resource': resource, 'spec': spec, 'form': form, 'object': instance, 'selected_client': selected_client})
 
 
 @resource_access('delete')
@@ -167,6 +205,10 @@ def generate_document(request):
     from jinja2.sandbox import SandboxedEnvironment
     from num2words import num2words
     form = GenerationForm(request.POST if request.method == 'POST' else None)
+    selected_client = contextual_client(request, RESOURCES['documentos'])
+    fix_client(form, selected_client)
+    if request.method == 'POST' and request.POST.get('guardar_drive') and not request.user.has_perm('office.add_documentocliente'):
+        raise PermissionDenied
     if request.method == 'POST' and form.is_valid():
         client = form.cleaned_data['cliente']
         template = form.cleaned_data['modelo']
@@ -211,8 +253,59 @@ def generate_document(request):
                 form.add_error(None, 'Não foi possível gerar o documento. Peça ao administrador para verificar o modelo e os campos.')
             else:
                 audit(request, 'generate', template)
+                if form.cleaned_data.get('guardar_drive'):
+                    obj = DocumentoCliente.objects.create(cliente=client, documento_nome=template.name)
+                    audit(request, 'add', obj)
+                    try:
+                        from .google_drive import upload_document
+                        upload_document(obj.pk, output.getvalue(), f'documento-{client.pk}-{template.pk}.docx',
+                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                        audit(request, 'drive_upload', obj)
+                    except Exception:
+                        form.add_error(None, 'O envio ao Drive falhou. Desmarque “Guardar na pasta Google Drive” e volte a gerar para descarregar o DOCX. Depois envie o ficheiro pelo registo criado abaixo.')
+                        return render(request, 'office/generate.html', {'form': form, 'selected_client': selected_client, 'failed_document': obj})
+                    messages.success(request, 'Documento gerado e guardado na pasta Google Drive do cliente.')
+                    return redirect('record_detail', resource='documentos', pk=obj.pk)
                 return FileResponse(output, as_attachment=True, filename=f'documento-{client.pk}-{template.pk}.docx')
-    return render(request, 'office/generate.html', {'form': form})
+    return render(request, 'office/generate.html', {'form': form, 'selected_client': selected_client})
+
+
+@login_required
+@permission_required('office.change_documentocliente', raise_exception=True)
+@permission_required('office.view_documentocliente', raise_exception=True)
+@require_POST
+def document_upload(request, pk):
+    obj = get_object_or_404(DocumentoCliente, pk=pk)
+    form = DriveUploadForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            save_drive_file(request, obj, form.cleaned_data['ficheiro'])
+        except Exception:
+            messages.error(request, 'Não foi possível enviar o ficheiro. Verifique a ligação Google; um registo já enviado não aceita outro ficheiro.')
+        else:
+            messages.success(request, 'Ficheiro guardado na pasta Google Drive do cliente.')
+    else:
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+    return redirect('record_detail', resource='documentos', pk=pk)
+
+
+@login_required
+@permission_required('office.change_cliente', raise_exception=True)
+@permission_required('office.view_cliente', raise_exception=True)
+@require_POST
+def client_drive_folder(request, pk):
+    obj = get_object_or_404(Cliente, pk=pk)
+    try:
+        from .google_drive import create_client_folder
+        create_client_folder(obj.pk)
+    except Exception:
+        messages.error(request, 'Não foi possível preparar a pasta. Verifique a ligação Google e se a pasta não está no lixo.')
+    else:
+        audit(request, 'drive_folder', obj)
+        messages.success(request, 'Pasta Google Drive preparada.')
+    return redirect('record_detail', resource='clientes', pk=pk)
 
 
 @login_required

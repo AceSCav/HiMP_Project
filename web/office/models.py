@@ -27,6 +27,7 @@ class Configuration(models.Model):
 
 
 class Cliente(models.Model):
+    drive_folder_id = models.CharField(max_length=200, blank=True, editable=False)
     cliente_id = models.AutoField(primary_key=True)
     nome_completo = models.TextField('Nome completo', null=True, blank=True)
     nif = models.TextField('NIF', null=True, blank=True, unique=True)
@@ -189,6 +190,8 @@ class Agendamento(models.Model):
 
 
 class DocumentoCliente(models.Model):
+    drive_file_id = models.CharField(max_length=200, blank=True, editable=False)
+    drive_filename = models.CharField(max_length=255, blank=True, editable=False)
     id = models.AutoField(primary_key=True)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, db_column='cliente_id', related_name='documentos')
     documento_nome = models.TextField('Documento')
@@ -220,6 +223,13 @@ class CalendarConnection(models.Model):
     # A shared office calendar; tokens must never be displayed in admin/forms.
     key = models.CharField(max_length=30, unique=True, default='office')
     encrypted_credentials = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class DriveConnection(models.Model):
+    key = models.CharField(max_length=30, unique=True, default='office')
+    encrypted_credentials = models.TextField()
+    root_folder_id = models.CharField(max_length=200, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 

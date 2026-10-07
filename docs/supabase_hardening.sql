@@ -12,7 +12,7 @@ BEGIN
     'lista_fases_processo','pagamento','motivo','status_pagamento',
     'agendamento','documentos_cliente','users',
     'office_configuration','office_documenttemplate','office_calendarconnection',
-    'office_auditevent','auth_user','auth_group','auth_permission',
+    'office_driveconnection','office_auditevent','auth_user','auth_group','auth_permission',
     'auth_user_groups','auth_user_user_permissions','auth_group_permissions',
     'django_session','django_admin_log','django_content_type','django_migrations',
     'axes_accessattempt','axes_accesslog','axes_accessfailurelog'
