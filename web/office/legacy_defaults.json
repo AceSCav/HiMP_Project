@@ -1,0 +1,189 @@
+{
+  "estado_civil": [
+    "Solteiro(a)",
+    "Casado(a)",
+    "Divorciado(a)",
+    "Viúvo(a)",
+    "União de Facto"
+  ],
+  "motivo_agenda": [
+    "Consulta",
+    "Atendimento em Loja Externa",
+    "Andamento de Processo"
+  ],
+  "duracao_agenda": [
+    "30 minutos",
+    "1 Hora",
+    "2 Horas",
+    "3 Horas"
+  ],
+  "documento": [
+    "primeira página do passaporte e página de assinatura (first page and signature page of passport)",
+    "comprovativo de morada (proof of address)",
+    "visto e carimbo (visit visa and stamp of entry into Europe)",
+    "Título de residência (residence card)",
+    "finanças/nif/contribuinte (finance/nif/contributor)",
+    "cartão de embarque ou bilhete (boarding pass or bus ticket)",
+    "declaração de matrícula (declaration from school)",
+    "procuração assinada (signed power of attorney)",
+    "segurança social/niss (social security)",
+    "utente (sns hospital number)",
+    "extrato bancário (bank statement of 3000 euros)",
+    "junta de freguesia (proof of address)",
+    "contrato/atividade (self employment activity or contract)",
+    "recibo verde (salary slip/or green slip)",
+    "declaração não dívida (no debt certificate from finance)",
+    "declaração nao aplicação de sanções (no debt certificate from social)",
+    "declaração de frequencia (from school)",
+    "certidão criminal (police clearance certificate)",
+    "bilhete de hotel (hotel bill)",
+    "Certificado de língua portuguesa(Certificate of Portuguese Language)",
+    "Certidão de nascimento(Birth certificate)",
+    "Certidão de casamento(Marriage certificate)"
+  ],
+  "genero": [
+    "Masculino",
+    "Feminino"
+  ],
+  "templates": {
+    "Procuração - Representação Aima": {
+      "arquivo": "Procuracao_Representacao_Aima.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "passaporte",
+        "validade_passaporte",
+        "nif",
+        "endereço",
+        "data_documento",
+        "nome_upper"
+      ]
+    },
+    "Contrato de Prestaçao de Serviços Jurídicos- Ação Intimação": {
+      "arquivo": "Contrato_de_Prestacao_de_Serviços_Jurídicos_Acao_Intimacao.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "passaporte",
+        "validade_passaporte",
+        "nif",
+        "endereço",
+        "data_documento",
+        "estado_civil",
+        "valor_contrato",
+        "numero_parcelas",
+        "valor_contrato_div_parcelas"
+      ]
+    },
+    "Procuração - Naturalização- Art.º 6.º, n.º 1": {
+      "arquivo": "Procuracao_Naturalização_Art_6_n_1.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "passaporte",
+        "validade_passaporte",
+        "nif",
+        "endereço",
+        "data_documento",
+        "titulo_residencia",
+        "validade_titulo_residencia",
+        "nome_upper",
+        "estado_civil"
+      ]
+    },
+    "Procuração - Casamento - Art.º 3.º, n.º 1": {
+      "arquivo": "Procuracao_Casamento_Art_3_n_1.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "endereço",
+        "passaporte",
+        "emissao_passaporte",
+        "validade_passaporte",
+        "local_emissao_passaporte",
+        "data_documento",
+        "nome_upper",
+        "estado_civil"
+      ]
+    },
+    "Procuração - Ação Intimação": {
+      "arquivo": "Procuracao_Acao_Intimacao.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "passaporte",
+        "validade_passaporte",
+        "nif",
+        "data_documento",
+        "endereço",
+        "nome_upper"
+      ]
+    },
+    "Procuração - Filho Originário - Art.º 1º CPR": {
+      "arquivo": "Procuracao_Filho_Originário_Art_1_C.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "passaporte",
+        "validade_passaporte",
+        "emissao_passaporte",
+        "local_emissao_passaporte",
+        "data_documento",
+        "endereço",
+        "nome_upper",
+        "estado_civil"
+      ]
+    },
+    "Procuração - (mãe) - Netos de Portugueses - Art.º 1º D": {
+      "arquivo": "Procuracao_mae_Netos_de_Portugueses_Art_1_D.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "passaporte",
+        "validade_passaporte",
+        "emissao_passaporte",
+        "local_emissao_passaporte",
+        "data_documento",
+        "endereço",
+        "nome_upper",
+        "estado_civil"
+      ]
+    },
+    "Procuração - (pai)  - Netos de Portugueses - Art.º 1º D": {
+      "arquivo": "Procuracao_pai_Netos_de_Portugueses_Art_1_D.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "naturalidade",
+        "passaporte",
+        "validade_passaporte",
+        "emissao_passaporte",
+        "local_emissao_passaporte",
+        "data_documento",
+        "endereço",
+        "nome_upper",
+        "estado_civil"
+      ]
+    },
+    "Contrato de Prestação de Serviços Jurídicos - Nacionalidade": {
+      "arquivo": "Contrato_de_Prestacao_de_Servicos_Juridicos_Nacionalidade.docx",
+      "campos": [
+        "nome",
+        "nacionalidade",
+        "valor_contrato",
+        "numero_parcelas",
+        "valor_contrato_div_parcelas",
+        "valor_contrato_string",
+        "mes_ano_inicio_prestacao",
+        "data_documento",
+        "endereço",
+        "valor_contrato_div_parcelas_string"
+      ]
+    }
+  }
+}

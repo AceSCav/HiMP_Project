@@ -1,0 +1,20 @@
+services:
+  web:
+    build: .
+    env_file: web/.env
+    environment:
+      DJANGO_DEBUG: "false"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - private_media:/app/private_media
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  private_media:

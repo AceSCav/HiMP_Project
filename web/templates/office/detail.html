@@ -1,0 +1,9 @@
+{% extends 'office/base.html' %}{% load office_tags %}
+{% block title %}{{ object }} · HIMP{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'record_list' resource %}">← {{ spec.title }}</a>
+<div class="page-heading"><div><p class="eyebrow">DETALHE DO REGISTO</p><h1>{{ object }}</h1></div><div class="actions">{% if can_edit %}<a class="button" href="{% url 'record_edit' resource object.pk %}">Editar registo</a>{% endif %}{% if can_delete %}<a class="button danger secondary" href="{% url 'record_delete' resource object.pk %}">Eliminar</a>{% endif %}</div></div>
+<section class="panel"><dl class="details-grid">{% for label, value in details %}<div><dt>{{ label }}</dt><dd>{{ value|display_value|linebreaksbr }}</dd></div>{% endfor %}</dl></section>
+{% if can_sync and perms.office.change_agendamento %}<section class="panel integration"><h2>Google Calendar</h2><p>{% if object.google_event_id %}Este agendamento está ligado ao Google. Sincronize para enviar as alterações.{% else %}Envie este agendamento para a agenda do escritório.{% endif %}</p><form method="post" action="{% url 'calendar_sync' object.pk %}">{% csrf_token %}<button class="button secondary">Sincronizar agendamento</button></form></section>{% endif %}
+{% for group in related %}<section class="panel related"><div class="panel-heading"><h2>{{ group.label }}</h2>{% if resource == 'clientes' %}<a href="{% url 'record_list' group.key %}?cliente={{ object.pk }}">Ver todos ↗</a>{% endif %}</div>{% for item in group.objects %}<a class="compact-row" href="{% url 'record_detail' group.key item.pk %}">{{ item }} <span>↗</span></a>{% empty %}<div class="empty">Sem registos associados.</div>{% endfor %}</section>{% endfor %}
+{% endblock %}
