@@ -68,8 +68,9 @@ class DriveTests(TestCase):
         self.assertEqual(self.client.get('/gestao/documentos/novo/?cliente=not-a-client').status_code, 404)
         self.assertEqual(self.client.get('/gestao/documentos/?cliente=99999').status_code, 404)
 
-    def test_without_context_client_is_still_selectable(self):
-        self.assertContains(self.client.get('/gestao/documentos/novo/'), '<select name="cliente"')
+    def test_documents_require_a_client_context(self):
+        self.assertRedirects(self.client.get('/gestao/documentos/'), '/gestao/clientes/')
+        self.assertRedirects(self.client.get('/gestao/documentos/novo/'), '/gestao/clientes/')
 
     def test_upload_permissions_methods_and_oauth_state(self):
         self.client.force_login(self.viewer)

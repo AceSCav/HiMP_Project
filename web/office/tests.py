@@ -36,8 +36,9 @@ class OfficeTests(TestCase):
         self.login()
         for resource in RESOURCES:
             with self.subTest(resource=resource):
-                self.assertEqual(self.client.get(reverse('record_list', args=[resource])).status_code, 200)
-                self.assertEqual(self.client.get(reverse('record_create', args=[resource])).status_code, 200)
+                context = f'?cliente={self.client_record.pk}' if resource == 'documentos' else ''
+                self.assertEqual(self.client.get(reverse('record_list', args=[resource]) + context).status_code, 200)
+                self.assertEqual(self.client.get(reverse('record_create', args=[resource]) + context).status_code, 200)
         self.assertEqual(self.client.get('/').status_code, 200)
 
     def test_read_only_user_cannot_mutate_or_manage_configuration(self):
@@ -185,7 +186,8 @@ class OfficeTests(TestCase):
         }
         for resource, payload in data.items():
             with self.subTest(resource=resource):
-                response = self.client.post(reverse('record_create', args=[resource]), payload)
+                context = f'?cliente={self.client_record.pk}' if resource == 'documentos' else ''
+                response = self.client.post(reverse('record_create', args=[resource]) + context, payload)
                 self.assertEqual(response.status_code, 302)
                 record = RESOURCES[resource].model.objects.get()
                 self.assertEqual(self.client.get(reverse('record_detail', args=[resource, record.pk])).status_code, 200)

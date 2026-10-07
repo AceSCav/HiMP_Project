@@ -14,7 +14,7 @@
   <p class="nav-label">ESPAÇO DE TRABALHO</p>
   <nav aria-label="Navegação principal">
     <a class="nav-link {% if request.path == '/' %}selected{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">◈</span> Visão geral</a>
-    {% for key, label in navigation %}<a class="nav-link {% if resource == key %}selected{% endif %}" href="{% url 'record_list' key %}"><span class="nav-icon">{% if key == 'clientes' %}◎{% elif key == 'processos' %}▤{% elif key == 'agenda' %}▦{% elif key == 'pagamentos' %}€{% else %}◇{% endif %}</span> {{ label }}</a>{% endfor %}
+    {% for key, label in navigation %}<a class="nav-link {% if resource == key or key == 'clientes' and resource == 'documentos' %}selected{% endif %}" href="{% url 'record_list' key %}"><span class="nav-icon">{% if key == 'clientes' %}◎{% elif key == 'processos' %}▤{% elif key == 'agenda' %}▦{% elif key == 'pagamentos' %}€{% else %}◇{% endif %}</span> {{ label }}</a>{% endfor %}
     {% if perms.office.view_pagamento %}<a class="nav-link {% if resource == 'relatorios' %}selected{% endif %}" href="{% url 'financial_report' %}"><span class="nav-icon">▥</span> Relatórios</a>{% endif %}
     {% if perms.office.generate_document and perms.office.view_cliente %}<a class="nav-link" href="{% url 'generate_document' %}"><span class="nav-icon">↗</span> Gerar documento</a>{% endif %}
     {% if user.is_staff %}<p class="nav-label">ADMINISTRAÇÃO</p><a class="nav-link" href="{% url 'admin:index' %}"><span class="nav-icon">⚙</span> Configurações</a>{% endif %}

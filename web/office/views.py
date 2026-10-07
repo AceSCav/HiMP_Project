@@ -12,6 +12,7 @@ from django.db.models import Q, Sum
 from django.db.models.deletion import ProtectedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.decorators.http import require_POST
@@ -109,6 +110,8 @@ def record_list(request, resource, spec):
             search |= Q(**{f'{field}__icontains': query})
         records = records.filter(search).distinct()
     selected_client = contextual_client(request, spec)
+    if resource == 'documentos' and selected_client is None:
+        return redirect('record_list', resource='clientes')
     if selected_client:
         records = records.filter(cliente=selected_client)
     if resource == 'pagamentos' and request.GET.get('filtro') == 'atraso':
@@ -155,6 +158,8 @@ def record_edit(request, resource, pk=None):
         raise PermissionDenied
     instance = get_object_or_404(spec.model, pk=pk) if pk is not None else None
     selected_client = contextual_client(request, spec) if instance is None else None
+    if resource == 'documentos' and instance is None and selected_client is None:
+        return redirect('record_list', resource='clientes')
     if resource == 'documentos' and instance and instance.drive_file_id:
         selected_client = instance.cliente
     form = record_form(spec)(request.POST if request.method == 'POST' else None,
@@ -192,6 +197,8 @@ def record_delete(request, resource, spec, pk):
             messages.error(request, 'Existem registos associados. Remova as dependências antes de eliminar.')
             return redirect('record_detail', resource=resource, pk=pk)
         messages.success(request, 'Registo eliminado.')
+        if resource == 'documentos':
+            return redirect(reverse('record_list', args=[resource]) + f'?cliente={instance.cliente_id}')
         return redirect('record_list', resource=resource)
     return render(request, 'office/delete.html', {'resource': resource, 'object': instance})
 
