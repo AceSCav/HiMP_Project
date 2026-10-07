@@ -5,6 +5,7 @@ Aplicação Web Python/Django com interface responsiva em português. Uma instal
 ## Funcionalidades
 
 - Painel com agenda, documentos pendentes e pagamentos em atraso.
+- Relatórios financeiros com filtros por período/cliente, evolução mensal, distribuição dos valores, recebimentos por motivo e tempo de atraso. Gráficos acessíveis e valores consultáveis no navegador, sem exportação obrigatória.
 - Pesquisa, criação, consulta, edição e eliminação protegida de clientes, processos, etapas, pagamentos, agendamentos e documentos solicitados.
 - Histórico de etapas e registos associados ao cliente.
 - Listas na base: estados civis, géneros, motivos/durações de agenda e documentos solicitados. Entidades, tipos de processo, fases, motivos e estados de pagamento reutilizam as tabelas atuais.
@@ -39,6 +40,14 @@ Não há registo público de contas. O administrador cria utilizadores em `/admi
 | Administração | Gestão + eliminar registos e gerir listas |
 
 O acesso ao admin exige também `is_staff`. Só o responsável técnico deve ser superuser: upload/edição dos modelos e ligação Google estão restritos a superusers de confiança. Contas sem função não veem registos. Esta versão assume **um único escritório**, com permissões por área; não implementa isolamento por organização, cliente ou advogado.
+
+## Relatórios financeiros
+
+Abra **Relatórios** no menu (exige `office.view_pagamento`). Escolha este mês, últimos seis meses, este ano ou um intervalo personalizado de até 36 meses; também pode filtrar por cliente.
+
+Recebimentos usam a **data de conclusão**. Valores por receber usam a **data limite**, e os atrasados são um subconjunto dos pendentes, não um valor adicional a somar. A previsão inclui todos os pagamentos com vencimento no período, mesmo os já recebidos. Por isso, um pagamento recebido num mês diferente do vencimento aparece em meses distintos nas duas séries.
+
+Os gráficos não dependem dos nomes hardcoded dos estados. Registos sem montante/data ou com montantes negativos são identificados; não são inventados valores. Há valores por mês acessíveis abaixo do gráfico. Despesas e lucro não são calculados, pois a aplicação só tem pagamentos de clientes.
 
 ## Base de dados e listas
 

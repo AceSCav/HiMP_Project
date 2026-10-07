@@ -235,3 +235,27 @@ def calendar_sync(request, pk):
 def health(request):
     from django.http import JsonResponse
     return JsonResponse({'status': 'ok'})
+
+
+@login_required
+@permission_required('office.view_pagamento', raise_exception=True)
+def financial_report(request):
+    from .financial_reports import build_report, preset_dates
+    from .report_forms import FinancialReportForm
+    today = timezone.localdate()
+    start, end = preset_dates(request.GET.get('periodo', '6m'), today)
+    data = request.GET.copy()
+    # Explicit dates take precedence over presets; invalid submitted values
+    # are displayed as errors and never silently replaced with a wider period.
+    if 'inicio' not in data and 'fim' not in data:
+        data['inicio'], data['fim'] = start.isoformat(), end.isoformat()
+    form = FinancialReportForm(data)
+    report = None
+    if form.is_valid():
+        start, end = form.cleaned_data['inicio'], form.cleaned_data['fim']
+        client = form.cleaned_data.get('cliente')
+        report = build_report(start, end, today, client.pk if client else None)
+    return render(request, 'office/financial_report.html', {
+        'resource': 'relatorios', 'form': form, 'report': report,
+        'start': start, 'end': end, 'today': today,
+    })

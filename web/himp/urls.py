@@ -11,6 +11,7 @@ urlpatterns = [
     path('conta/senha/alterada/', auth_views.PasswordChangeDoneView.as_view(template_name='registration/password_done.html'), name='password_change_done'),
     path('', views.dashboard, name='dashboard'),
     path('health/', views.health, name='health'),
+    path('relatorios/financeiro/', views.financial_report, name='financial_report'),
     path('gerar-documento/', views.generate_document, name='generate_document'),
     path('google/ligar/', google_calendar.connect, name='google_connect'),
     path('google/callback/', google_calendar.callback, name='google_callback'),
