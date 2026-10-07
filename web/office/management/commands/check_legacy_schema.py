@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
+from django.db.migrations.loader import MigrationLoader
 from office import models
 
 LEGACY = [models.Cliente, models.Entidade, models.TipoProcesso, models.Fase, models.Processo, models.Etapa, models.Motivo, models.StatusPagamento, models.Pagamento, models.Agendamento, models.DocumentoCliente]
@@ -10,6 +11,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         failures = []
+        # Compare the original desktop schema, before later Web migrations add
+        # fields such as Drive references to those same business tables.
+        legacy_apps = MigrationLoader(connection).project_state([('office', '0001_legacy_schema')]).apps
         with connection.cursor() as cursor:
             tables = set(connection.introspection.table_names(cursor))
             for model in LEGACY:
@@ -18,7 +22,8 @@ class Command(BaseCommand):
                     failures.append(f'Falta a tabela {table}')
                     continue
                 actual = {col.name for col in connection.introspection.get_table_description(cursor, table)}
-                required = {field.column for field in model._meta.fields}
+                original = legacy_apps.get_model('office', model._meta.model_name)
+                required = {field.column for field in original._meta.fields}
                 missing = required - actual
                 if missing:
                     failures.append(f'{table}: faltam colunas {sorted(missing)}')

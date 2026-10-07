@@ -17,7 +17,7 @@ python web/manage.py bootstrap_roles
 python web/manage.py createsuperuser
 ```
 
-`0001` contém apenas as onze tabelas originais de negócio. `--fake-initial` reconhece-as sem recriar. `0002` cria as tabelas Web; Django cria Auth/Sessions; `0003` altera tipos financeiros/horários; `0004` importa catálogos e metadados de modelos. A tabela antiga `users` não é usada pela Web.
+`0001` contém apenas as onze tabelas originais de negócio. `--fake-initial` reconhece-as sem recriar. `0002` cria as tabelas Web; Django cria Auth/Sessions; `0003` altera tipos financeiros/horários; `0004` importa catálogos e metadados de modelos; `0005` adiciona referências de pastas/ficheiros Google Drive e a tabela privada de ligação Google Drive. A pré-verificação compara as colunas de `0001`, sem exigir antecipadamente os novos campos Web. A tabela antiga `users` não é usada pela Web.
 
 Numa **base vazia**, execute apenas `migrate`. Num esquema parcial/diferente, não use `--fake` para contornar erros nem apague tabelas: prepare uma migração explícita para a estrutura real.
 

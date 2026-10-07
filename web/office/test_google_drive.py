@@ -1,4 +1,5 @@
-from io import BytesIO
+from io import BytesIO, StringIO
+from types import SimpleNamespace
 from hashlib import sha256
 import tempfile
 from cryptography.fernet import Fernet
@@ -6,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User, Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase, override_settings
 from docx import Document
 
@@ -28,6 +31,19 @@ class DriveTests(TestCase):
 
     def pdf(self):
         return SimpleUploadedFile('passaporte.pdf', b'%PDF-1.7\nexample', content_type='application/pdf')
+
+    def test_legacy_preflight_does_not_require_new_drive_columns(self):
+        from .management.commands.check_legacy_schema import LEGACY
+        tables = {model._meta.db_table: model for model in LEGACY}
+        def columns(cursor, table):
+            return [SimpleNamespace(name=f.column) for f in tables[table]._meta.fields if not f.name.startswith('drive_')]
+        with patch.object(connection.introspection, 'table_names', return_value=list(tables)), \
+                patch.object(connection.introspection, 'get_table_description', side_effect=columns), \
+                patch.object(connection, 'cursor') as cursor:
+            cursor.return_value.__enter__.return_value.fetchone.return_value = (0,)
+            output = StringIO()
+            call_command('check_legacy_schema', stdout=output)
+            self.assertIn('Pré-verificação concluída', output.getvalue())
 
     def test_client_flow_keeps_context_and_ignores_forged_client(self):
         url = f'/gestao/documentos/novo/?cliente={self.person.pk}'
