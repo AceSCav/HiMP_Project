@@ -213,6 +213,5 @@ class DriveTests(TestCase):
             response = self.client.post(url, {'modelo': template.pk})
             self.assertTrue(response['Content-Type'].startswith('application/vnd.openxmlformats'))
             output = BytesIO(b''.join(response.streaming_content))
-            response.close()
             self.assertEqual(Document(output).paragraphs[0].text, 'Olá Ana Teste')
             self.assertEqual(DocumentoCliente.objects.count(), 3)
