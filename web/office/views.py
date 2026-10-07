@@ -117,7 +117,7 @@ def record_list(request, resource, spec):
     if resource == 'pagamentos' and request.GET.get('filtro') == 'atraso':
         records = records.filter(data_conclusao__isnull=True, data_limite__lt=timezone.localdate())
     page = Paginator(records, 25).get_page(request.GET.get('page'))
-    rows = [{'object': obj, 'cells': [getattr(obj, field) for field in spec.columns]} for obj in page]
+    rows = [{'object': obj, 'cells': [f'{obj.numero_parcela} de {obj.total_parcelas}' if field == 'numero_parcela' and obj.plano_id else getattr(obj, field) for field in spec.columns]} for obj in page]
     headers = [spec.model._meta.get_field(field).verbose_name for field in spec.columns]
     return render(request, 'office/list.html', {
         'resource': resource, 'spec': spec, 'rows': rows, 'headers': headers,
@@ -138,6 +138,10 @@ def record_detail(request, resource, spec, pk):
                 related.append({'key': key, 'label': RESOURCES[key].title, 'objects': getattr(instance, manager).all()[:20]})
     elif resource == 'processos' and request.user.has_perm('office.view_etapa'):
         related.append({'key': 'etapas', 'label': 'Histórico de etapas', 'objects': instance.etapas.select_related('fase')[:50]})
+    elif resource == 'pagamentos' and instance.plano_id:
+        details.append(('Parcela', f'{instance.numero_parcela} de {instance.total_parcelas}'))
+        related.append({'key': 'pagamentos', 'label': 'Outras parcelas do plano', 'objects': Pagamento.objects.filter(
+            plano_id=instance.plano_id, cliente_id=instance.cliente_id).exclude(pk=instance.pk).select_related('cliente').order_by('numero_parcela')})
     return render(request, 'office/detail.html', {
         'resource': resource, 'spec': spec, 'object': instance, 'details': details, 'related': related,
         'can_edit': request.user.has_perm(f'office.change_{spec.model._meta.model_name}'),
@@ -162,17 +166,29 @@ def record_edit(request, resource, pk=None):
         return redirect('record_list', resource='clientes')
     if resource == 'documentos' and instance and instance.drive_file_id:
         selected_client = instance.cliente
+    if resource == 'pagamentos' and instance and instance.plano_id:
+        selected_client = instance.cliente
     form = record_form(spec)(request.POST if request.method == 'POST' else None,
                              request.FILES if request.method == 'POST' else None, instance=instance)
     fix_client(form, selected_client)
     if request.method == 'POST' and form.is_valid():
         try:
             with transaction.atomic():
-                obj = form.save()
-                audit(request, action, obj)
+                if resource == 'pagamentos' and instance is None:
+                    from .payment_installments import create_installments
+                    payments = create_installments(form)
+                    obj = payments[0]
+                    for payment in payments:
+                        audit(request, action, payment)
+                else:
+                    obj = form.save()
+                    audit(request, action, obj)
         except IntegrityError:
             form.add_error(None, 'Este registo entra em conflito com dados existentes. Verifique os identificadores.')
         else:
+            if resource == 'pagamentos' and instance is None and len(payments) > 1:
+                messages.success(request, f'{len(payments)} parcelas criadas. Pode editar os valores, referências e vencimentos de cada parcela individualmente.')
+                return redirect(reverse('record_list', args=['pagamentos']) + f'?cliente={obj.cliente_id}')
             messages.success(request, 'Registo guardado com sucesso.')
             if resource == 'documentos' and form.cleaned_data.get('ficheiro'):
                 try:

@@ -73,6 +73,16 @@ Os tokens OAuth são cifrados e não aparecem nos formulários/admin. Não torne
 
 A migração `0005` adiciona as referências de pastas/ficheiros e a tabela privada de ligação. Reveja também `docs/supabase_hardening.sql` para bloquear acesso público à nova tabela. Nenhuma conta Google é ligada automaticamente; é necessário configurar as credenciais e autorizar a conta do escritório. A aplicação continua a funcionar sem Drive para os registos locais.
 
+## Pagamentos parcelados
+
+Em **Pagamentos → Novo registo**, introduza o **valor total** e o **número de parcelas** (1 a 120). O sistema divide o total em cêntimos exatos e distribui eventuais cêntimos restantes pelas primeiras parcelas: 1.000 € em três parcelas resulta em 333,34 €, 333,33 € e 333,33 €. Use 1 para um pagamento único.
+
+Com várias parcelas, a **data limite da primeira** é obrigatória. O **intervalo em dias** é opcional: em branco, as restantes parcelas ficam sem vencimento; com 30, os vencimentos são calculados a cada 30 dias desde a primeira data. São dias corridos, não meses de calendário. Depois pode definir ou alterar individualmente os vencimentos. A primeira parcela mantém uma data limite obrigatória.
+
+Cliente, entidade, referência, motivo e estado inicial são aplicados ao plano. A conclusão de cada parcela é registada individualmente depois da criação; as parcelas futuras não são marcadas como pagas em conjunto. O cliente de um plano é preservado na edição. A lista identifica cada parcela como **1 de N**, e o detalhe permite abrir as restantes parcelas do mesmo plano. Os valores, referências e datas podem ser editados por parcela. Todas as parcelas e a auditoria são criadas numa única transação; falhas não deixam um plano parcial.
+
+Parcelas sem vencimento não entram na previsão financeira por data: os relatórios avisam sobre pagamentos em aberto sem data limite. A migração `0006` acrescenta apenas a identificação do plano e a numeração das parcelas; pagamentos existentes mantêm os seus valores e não são agrupados automaticamente.
+
 ## Google Calendar
 
 No Google Cloud, crie um OAuth client **Web application** com o URI HTTPS exato `/google/callback/` da instalação. Configure no servidor `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_CALENDAR_ID` e `TOKEN_ENCRYPTION_KEY`. Gere a chave com:

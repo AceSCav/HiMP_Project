@@ -23,7 +23,7 @@ RESOURCES = {
         ('processo__numero_processo', 'processo__cliente__nome_completo', 'fase__fase')),
     'pagamentos': Resource(models.Pagamento, 'Pagamentos', 'Prazos, referências e valores com precisão de cêntimos.',
         ('cliente', 'entidade', 'referencia', 'montante', 'data_limite', 'data_conclusao', 'status', 'motivo'),
-        ('cliente', 'montante', 'data_limite', 'status', 'referencia'), ('cliente__nome_completo', 'referencia')),
+        ('cliente', 'numero_parcela', 'montante', 'data_limite', 'status', 'referencia'), ('cliente__nome_completo', 'referencia')),
     'agenda': Resource(models.Agendamento, 'Agenda', 'Organize os atendimentos e sincronize com o Google Calendar.',
         ('cliente', 'titulo', 'data_inicio', 'duracao', 'motivo', 'descricao'),
         ('titulo', 'cliente', 'data_inicio', 'duracao', 'motivo'), ('titulo', 'cliente__nome_completo', 'motivo')),

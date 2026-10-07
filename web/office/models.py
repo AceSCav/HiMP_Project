@@ -154,6 +154,9 @@ class StatusPagamento(models.Model):
 
 
 class Pagamento(models.Model):
+    plano_id = models.UUIDField(null=True, blank=True, editable=False, db_index=True)
+    numero_parcela = models.PositiveSmallIntegerField('Parcela', null=True, blank=True, editable=False)
+    total_parcelas = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
     pagamento_id = models.BigAutoField(primary_key=True)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, db_column='cliente_id', null=True, blank=True, related_name='pagamentos')
     entidade = models.CharField('Entidade de pagamento', max_length=20, null=True, blank=True)
@@ -168,7 +171,8 @@ class Pagamento(models.Model):
         ordering = ['data_limite', '-pagamento_id']
         verbose_name = 'Pagamento'
     def __str__(self):
-        return f'Pagamento {self.pk} · {self.cliente or "Sem cliente"}'
+        label = f'Parcela {self.numero_parcela} de {self.total_parcelas}' if self.plano_id else f'Pagamento {self.pk}'
+        return f'{label} · {self.cliente or "Sem cliente"}'
 
 
 class Agendamento(models.Model):

@@ -1,13 +1,13 @@
 import re
 import zipfile
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 from io import BytesIO
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import models
-from .models import Configuration, DocumentTemplate, Cliente, DocumentoCliente
+from .models import Configuration, DocumentTemplate, Cliente, DocumentoCliente, Pagamento
 
 
 def validate_drive_file(file):
@@ -79,6 +79,23 @@ class RecordForm(forms.ModelForm):
             self.fields['ficheiro'] = deepcopy(DriveUploadForm.base_fields['ficheiro'])
             self.fields['ficheiro'].required = False
             self.fields['ficheiro'].help_text += ' Opcional; requer ligação Google do escritório.'
+        if self._meta.model == Pagamento and not self.instance.pk:
+            self.fields['montante'].label = 'Valor total (€)'
+            self.fields['montante'].help_text = 'O valor será dividido pelas parcelas, com acerto dos cêntimos para manter o total.'
+            self.fields['numero_parcelas'] = forms.IntegerField(label='Número de parcelas', min_value=1, max_value=120, initial=1, required=False,
+                help_text='Use 1 para pagamento único. Pode criar até 120 parcelas de uma vez.')
+            self.fields['intervalo_dias'] = forms.IntegerField(label='Intervalo entre parcelas (dias)', min_value=1, max_value=365, required=False,
+                widget=forms.NumberInput(attrs={'placeholder': 'Opcional · exemplo: 30'}),
+                help_text='Em branco: só a primeira tem vencimento; as restantes ficam sem data. Ex.: 30 cria vencimentos a cada 30 dias.')
+            self.fields['data_limite'].label = 'Data limite da primeira parcela'
+            self.fields['data_limite'].help_text = 'Obrigatória quando existem várias parcelas. As restantes datas podem ser definidas individualmente depois.'
+            self.fields['data_conclusao'].help_text = 'Para pagamento parcelado, registe a conclusão de cada parcela depois de criar o plano.'
+            self.fields['status'].help_text = 'Estado inicial aplicado a todas as parcelas.'
+            self.fields['referencia'].help_text = 'Aplicada a todas as parcelas; pode alterar a referência de cada uma depois.'
+            self.order_fields(['cliente', 'montante', 'numero_parcelas', 'data_limite', 'intervalo_dias', 'entidade', 'referencia', 'motivo', 'status', 'data_conclusao'])
+        elif self._meta.model == Pagamento and self.instance.numero_parcela == 1:
+            self.fields['data_limite'].required = True
+            self.fields['data_limite'].help_text = 'A primeira parcela do plano tem de manter uma data limite.'
 
     def clean(self):
         data = super().clean()
@@ -92,6 +109,23 @@ class RecordForm(forms.ModelForm):
                 self.add_error(name, f'Introduza {length} algarismos.')
         if data.get('montante') is not None and data['montante'] < 0:
             self.add_error('montante', 'O montante não pode ser negativo.')
+        if self._meta.model == Pagamento and not self.instance.pk:
+            count = data.get('numero_parcelas') or 1
+            data['numero_parcelas'] = count
+            if count > 1:
+                if not data.get('data_limite'):
+                    self.add_error('data_limite', 'Defina a data limite da primeira parcela.')
+                if data.get('montante') is not None and data['montante'] * 100 < count:
+                    self.add_error('montante', 'O total deve permitir pelo menos 0,01 € por parcela.')
+                if data.get('data_conclusao'):
+                    self.add_error('data_conclusao', 'Registe a conclusão de cada parcela individualmente, depois de criar o plano.')
+                if data.get('data_limite') and data.get('intervalo_dias'):
+                    try:
+                        data['data_limite'] + timedelta(days=data['intervalo_dias'] * (count - 1))
+                    except OverflowError:
+                        self.add_error('intervalo_dias', 'O último vencimento ultrapassa o limite de datas. Reduza o intervalo ou o número de parcelas.')
+            elif data.get('intervalo_dias'):
+                self.add_error('intervalo_dias', 'O intervalo só é usado quando existem várias parcelas.')
         if data.get('data_nascimento') and data['data_nascimento'] > date.today():
             self.add_error('data_nascimento', 'A data de nascimento não pode ser futura.')
         for start, end in [('emissao_passaporte', 'validade_passaporte'), ('emissao_bi_cc', 'validade_bi_cc')]:
