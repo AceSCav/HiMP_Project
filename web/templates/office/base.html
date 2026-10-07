@@ -1,0 +1,33 @@
+{% load static %}<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HIMP · Gestão{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'office/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#content">Saltar para o conteúdo</a>
+{% if user.is_authenticated %}
+<aside class="sidebar">
+  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">H</span><span>himp<span class="brand-dot">.</span></span></a>
+  <p class="nav-label">ESPAÇO DE TRABALHO</p>
+  <nav aria-label="Navegação principal">
+    <a class="nav-link {% if request.path == '/' %}selected{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">◈</span> Visão geral</a>
+    {% for key, label in navigation %}<a class="nav-link {% if resource == key or key == 'clientes' and resource == 'documentos' %}selected{% endif %}" href="{% url 'record_list' key %}"><span class="nav-icon">{% if key == 'clientes' %}◎{% elif key == 'processos' %}▤{% elif key == 'agenda' %}▦{% elif key == 'pagamentos' %}€{% else %}◇{% endif %}</span> {{ label }}</a>{% endfor %}
+    {% if perms.office.view_pagamento %}<a class="nav-link {% if resource == 'relatorios' %}selected{% endif %}" href="{% url 'financial_report' %}"><span class="nav-icon">▥</span> Relatórios</a>{% endif %}
+    {% if perms.office.generate_document and perms.office.view_cliente %}<a class="nav-link" href="{% url 'generate_document' %}"><span class="nav-icon">↗</span> Gerar documento</a>{% endif %}
+    {% if user.is_staff %}<p class="nav-label">ADMINISTRAÇÃO</p><a class="nav-link" href="{% url 'admin:index' %}"><span class="nav-icon">⚙</span> Configurações</a>{% endif %}
+  </nav>
+  <div class="sidebar-bottom"><div class="avatar">{{ user.get_username|first|upper }}</div><div><strong>{{ user.get_full_name|default:user.username }}</strong><a href="{% url 'password_change' %}">Alterar senha</a></div></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span>GESTÃO DO ESCRITÓRIO</span><div class="topbar-right"><span class="live-dot"></span> Sessão protegida <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="text-button" type="submit">Sair ↗</button></form></div></header>
+{% else %}<div class="login-workspace"><a class="brand" href="{% url 'login' %}"><span class="brand-mark">H</span><span>himp.</span></a>{% endif %}
+<main id="content">
+  {% for message in messages %}<div class="alert {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+<footer>HIMP · Gestão simples, trabalho organizado.</footer>
+</div>
+</body></html>

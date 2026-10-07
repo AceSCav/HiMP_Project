@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+*.sqlite3
+web/private_media/
+web/staticfiles/
+credentials*.json
+token*.json
+*.zip
+.pytest_cache/
